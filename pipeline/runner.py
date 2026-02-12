@@ -196,6 +196,50 @@ class PipelineRunner:
             else:
                 effect.scan_strength, effect.shift, effect.speed = 0.15, 10, 3
 
+        elif name == "chromatic_aberration":
+            if self.preset_idx == 0:
+                effect.strength, effect.radial = 8, True
+            elif self.preset_idx == 1:
+                effect.strength, effect.radial = 16, True
+            else:
+                effect.strength, effect.radial = 12, False
+
+        elif name == "pixel_sort":
+            if self.preset_idx == 0:
+                effect.threshold, effect.intensity, effect._step = 80, 0.5, 4
+            elif self.preset_idx == 1:
+                effect.threshold, effect.intensity, effect._step = 40, 0.8, 2
+            else:
+                effect.threshold, effect.intensity, effect._step = 120, 0.4, 6
+
+        elif name == "thermal_vision":
+            effect._map_idx = self.preset_idx % 3
+            effect.colormap = effect._colormaps[effect._map_idx]
+
+        elif name == "strobe_flash":
+            if self.preset_idx == 0:
+                effect.rate, effect.intensity, effect.color_mode = 6, 0.8, 0
+            elif self.preset_idx == 1:
+                effect.rate, effect.intensity, effect.color_mode = 3, 1.0, 0
+            else:
+                effect.rate, effect.intensity, effect.color_mode = 4, 0.9, 1
+
+        elif name == "edge_neon":
+            if self.preset_idx == 0:
+                effect.t1, effect.t2, effect.hue_speed, effect.glow_size = 40, 120, 2.0, 5
+            elif self.preset_idx == 1:
+                effect.t1, effect.t2, effect.hue_speed, effect.glow_size = 20, 80, 4.0, 8
+            else:
+                effect.t1, effect.t2, effect.hue_speed, effect.glow_size = 60, 160, 1.0, 3
+
+        elif name == "vhs_retro":
+            if self.preset_idx == 0:
+                effect.tracking_intensity, effect.color_bleed, effect.noise_amount = 0.3, 4, 12
+            elif self.preset_idx == 1:
+                effect.tracking_intensity, effect.color_bleed, effect.noise_amount = 0.7, 8, 25
+            else:
+                effect.tracking_intensity, effect.color_bleed, effect.noise_amount = 0.15, 2, 6
+
     # -------- FPS --------
     def _update_fps(self):
         self._fps_count += 1
@@ -271,7 +315,7 @@ class PipelineRunner:
                     f"Active: {self._stack_names()}",
                     f"Preset: {self.preset_idx} | Motion: {m:.2f} | Pose: {self.pose_enabled}",
                     f"{bars}",
-                    "1-9 toggle | 0 clear | [] preset | TAB cycle | g pose | f full | h HUD | q quit",
+                    "1-9 -=\\ toggle | 0 clear | [] preset | TAB cycle | g pose | f full | h HUD | q quit",
                 ])
 
             # --- FPS overlay (always visible) ---
@@ -312,6 +356,17 @@ class PipelineRunner:
                 effect_id = key - ord("0")
                 if effect_id in EFFECTS_FACTORY:
                     self._toggle_effect(effect_id)
+
+            # Effects 10-12: - = \
+            elif key == ord("-"):
+                if 10 in EFFECTS_FACTORY:
+                    self._toggle_effect(10)
+            elif key == ord("="):
+                if 11 in EFFECTS_FACTORY:
+                    self._toggle_effect(11)
+            elif key == ord("\\"):
+                if 12 in EFFECTS_FACTORY:
+                    self._toggle_effect(12)
 
             # Clear effects: 0
             elif key == ord("0"):
