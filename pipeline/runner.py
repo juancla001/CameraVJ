@@ -7,6 +7,7 @@ from vision.motion import MotionEstimator
 from vision.zones import ZoneMapper
 from vision.pose import PoseEstimator, NeonSkeletonRenderer, detect_gestures
 from effects import EFFECTS_FACTORY
+from audio import AudioManager
 
 
 def _apply_hud(frame, lines):
@@ -55,6 +56,9 @@ class PipelineRunner:
         self.pose = PoseEstimator(model_complexity=1)
         self.neon = NeonSkeletonRenderer(trail_len=14, glow=2)
         self._gesture_cooldown = 0
+
+        # --- Audio ---
+        self.audio = AudioManager()
 
         # --- FPS counter ---
         self._fps_time = time.time()
@@ -279,7 +283,11 @@ class PipelineRunner:
             if self.pose_enabled and gestures["arms_open"]:
                 m = min(1.0, m + 0.35)
 
+            # --- Audio ---
+            audio_controls = self.audio.update()
+
             controls = {"motion": m, "zones": zone_vals}
+            controls.update(audio_controls)
 
             # --- Apply effect stack ---
             out = frame
@@ -310,12 +318,19 @@ class PipelineRunner:
                     f"L:{zone_vals['left']:.2f} R:{zone_vals['right']:.2f} "
                     f"T:{zone_vals['top']:.2f} B:{zone_vals['bottom']:.2f}"
                 )
+                audio_str = ""
+                if self.audio.enabled:
+                    ac = audio_controls
+                    audio_str = (
+                        f" | Beat:{ac['beat']:.0f} E:{ac['energy']:.2f}"
+                        f" B:{ac['bass']:.2f} M:{ac['mid']:.2f} H:{ac['high']:.2f}"
+                    )
                 out = _apply_hud(out, [
                     f"FPS: {self._fps:.1f} | Stack: [{','.join(str(e) for e in self._stack_ids())}]",
                     f"Active: {self._stack_names()}",
-                    f"Preset: {self.preset_idx} | Motion: {m:.2f} | Pose: {self.pose_enabled}",
+                    f"Preset: {self.preset_idx} | Motion: {m:.2f} | Pose: {self.pose_enabled} | Audio: {self.audio.enabled}{audio_str}",
                     f"{bars}",
-                    "1-9 -=\\ toggle | 0 clear | [] preset | TAB cycle | g pose | f full | h HUD | q quit",
+                    "1-9 -=\\ toggle | 0 clear | [] preset | TAB cycle | a audio | g pose | f full | h HUD | q quit",
                 ])
 
             # --- FPS overlay (always visible) ---
@@ -391,9 +406,14 @@ class PipelineRunner:
             elif key == ord("v"):
                 self.show_vision_debug = not self.show_vision_debug
 
+            elif key == ord("a"):
+                self.audio.toggle()
+
             elif key == ord("r"):
                 self._reset_active_effect()
             elif key == ord("s"):
                 self._screenshot(out)
 
+        # Cleanup
+        self.audio.stop()
         cv2.destroyAllWindows()
