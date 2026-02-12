@@ -23,3 +23,6 @@ MOTION_SMOOTH = 0.2       # suavizado EMA (0.1–0.3)
 MOTION_GAIN = 2.5         # multiplica sensibilidad (1.0–4.0)
 MOTION_DEADZONE = 0.02    # ignora movimiento chiquito (0.01–0.05)
 
+# --- Effect Stack ---
+EFFECT_STACK_MAX = 4      # máximo efectos simultáneos en el stack
+
