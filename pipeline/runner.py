@@ -8,6 +8,7 @@ from vision.zones import ZoneMapper
 from vision.pose import PoseEstimator, NeonSkeletonRenderer, detect_gestures
 from effects import EFFECTS_FACTORY
 from audio import AudioManager
+from midi import MidiController
 
 
 def _apply_hud(frame, lines):
@@ -59,6 +60,10 @@ class PipelineRunner:
 
         # --- Audio ---
         self.audio = AudioManager()
+
+        # --- MIDI ---
+        self.midi = MidiController()
+        self._midi_fader = 1.0  # global mix (1.0 = full effect)
 
         # --- FPS counter ---
         self._fps_time = time.time()
@@ -289,6 +294,9 @@ class PipelineRunner:
             controls = {"motion": m, "zones": zone_vals}
             controls.update(audio_controls)
 
+            # --- MIDI poll ---
+            self.midi.poll(self)
+
             # --- Apply effect stack ---
             out = frame
             for _, effect in self.effect_stack:
@@ -297,6 +305,10 @@ class PipelineRunner:
                 except Exception:
                     pass
                 out = effect.apply(out)
+
+            # --- MIDI fader: global mix (original vs processed) ---
+            if self._midi_fader < 0.99 and self.effect_stack:
+                out = cv2.addWeighted(frame, 1.0 - self._midi_fader, out, self._midi_fader, 0)
 
             # --- Pose overlay ---
             if self.pose_enabled:
@@ -328,9 +340,9 @@ class PipelineRunner:
                 out = _apply_hud(out, [
                     f"FPS: {self._fps:.1f} | Stack: [{','.join(str(e) for e in self._stack_ids())}]",
                     f"Active: {self._stack_names()}",
-                    f"Preset: {self.preset_idx} | Motion: {m:.2f} | Pose: {self.pose_enabled} | Audio: {self.audio.enabled}{audio_str}",
+                    f"Preset: {self.preset_idx} | Motion: {m:.2f} | Pose: {self.pose_enabled} | Audio: {self.audio.enabled} | MIDI: {self.midi.enabled}{audio_str}",
                     f"{bars}",
-                    "1-9 -=\\ toggle | 0 clear | [] preset | TAB cycle | a audio | g pose | f full | h HUD | q quit",
+                    "1-9 -=\\ toggle | 0 clear | [] preset | TAB cycle | a audio | m midi | g pose | f full | h HUD | q quit",
                 ])
 
             # --- FPS overlay (always visible) ---
@@ -408,6 +420,8 @@ class PipelineRunner:
 
             elif key == ord("a"):
                 self.audio.toggle()
+            elif key == ord("m"):
+                self.midi.toggle()
 
             elif key == ord("r"):
                 self._reset_active_effect()
@@ -416,4 +430,5 @@ class PipelineRunner:
 
         # Cleanup
         self.audio.stop()
+        self.midi.stop()
         cv2.destroyAllWindows()
