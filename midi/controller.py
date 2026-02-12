@@ -97,8 +97,7 @@ class MidiController:
             runner._clear_effects()
 
         elif pad_num == 14:
-            # Auto-VJ toggle (placeholder for FASE 6)
-            pass
+            runner.autovj.toggle()
 
         elif pad_num == 15:
             runner.audio.toggle()
