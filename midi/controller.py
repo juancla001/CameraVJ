@@ -89,9 +89,10 @@ class MidiController:
         from effects import EFFECTS_FACTORY
 
         if 1 <= pad_num <= 12:
-            # Toggle effect
-            if pad_num in EFFECTS_FACTORY:
-                runner._toggle_effect(pad_num)
+            # Toggle effect (page-aware, same as keyboard)
+            effect_id = pad_num + runner.fx_page * 12
+            if effect_id in EFFECTS_FACTORY:
+                runner._toggle_effect(effect_id)
 
         elif pad_num == 13:
             runner._clear_effects()
@@ -103,7 +104,8 @@ class MidiController:
             runner.audio.toggle()
 
         elif pad_num == 16:
-            runner.pose_enabled = not runner.pose_enabled
+            # Page toggle (same as 'n' key)
+            runner.fx_page = 1 - runner.fx_page
 
     def _handle_knob(self, knob_idx, value, runner):
         import config
@@ -213,3 +215,57 @@ class MidiController:
             elif knob_idx == 1:
                 effect._map_idx = int(value * 2.99)
                 effect.colormap = effect._colormaps[effect._map_idx]
+
+        elif name == "glitch_blocks":
+            if knob_idx == 0:
+                effect.block_count = int(2 + 20 * value)
+            elif knob_idx == 1:
+                effect.max_shift = int(5 + 80 * value)
+            elif knob_idx == 2:
+                effect.intensity = value
+
+        elif name == "ascii_art":
+            if knob_idx == 0:
+                effect.cell_size = max(4, int(4 + 12 * (1.0 - value)))
+            elif knob_idx == 1:
+                effect.colored = value > 0.5
+
+        elif name == "particle_rain":
+            if knob_idx == 0:
+                effect.speed = 0.5 + 8.0 * value
+            elif knob_idx == 1:
+                effect.max_particles = int(50 + 400 * value)
+            elif knob_idx == 2:
+                effect.direction = -1 if value < 0.5 else 1
+
+        elif name == "color_invert_pulse":
+            if knob_idx == 0:
+                effect.rate = max(2, int(2 + 15 * (1.0 - value)))
+            elif knob_idx == 1:
+                effect.smooth = 0.05 + 0.4 * value
+
+        elif name == "datamosh":
+            if knob_idx == 0:
+                effect.corruption = 0.05 + 0.7 * value
+            elif knob_idx == 1:
+                effect.intensity = 0.2 + 0.7 * value
+            elif knob_idx == 2:
+                effect.block_size = max(8, int(8 + 32 * (1.0 - value)))
+
+        elif name == "zoom_pulse":
+            if knob_idx == 0:
+                effect.amplitude = 0.02 + 0.30 * value
+            elif knob_idx == 1:
+                effect.speed = 0.04 + 0.25 * value
+
+        elif name == "duotone":
+            if knob_idx == 0:
+                effect.palette_idx = int(value * 4.99)
+            elif knob_idx == 1:
+                effect.contrast = 0.6 + 1.5 * value
+
+        elif name == "slit_scan":
+            if knob_idx == 0:
+                effect.buffer_size = int(10 + 50 * value)
+            elif knob_idx == 1:
+                effect.spread = 0.2 + 3.0 * value

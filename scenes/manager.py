@@ -118,6 +118,14 @@ class SceneManager:
             "rate", "color_mode",
             "hue_speed", "glow_size",
             "tracking_intensity", "color_bleed", "noise_amount",
+            "block_count", "max_shift",
+            "cell_size", "colored", "font_scale",
+            "max_particles",
+            "blend", "smooth",
+            "corruption", "block_size",
+            "amplitude",
+            "palette_idx",
+            "buffer_size", "spread",
         ]:
             if hasattr(effect, attr):
                 val = getattr(effect, attr)

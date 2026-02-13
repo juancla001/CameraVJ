@@ -43,6 +43,7 @@ class PipelineRunner:
         self.effect_stack = []       # list of (effect_id, Effect instance)
         self.active_idx = 0          # index into effect_stack for preset control
         self.preset_idx = 0
+        self.fx_page = 0             # 0=effects 1-12, 1=effects 13-20
 
         # --- Effect instance cache (avoid recreating on toggle) ---
         self._effect_cache = {}
@@ -262,6 +263,49 @@ class PipelineRunner:
             else:
                 effect.tracking_intensity, effect.color_bleed, effect.noise_amount = 0.15, 2, 6
 
+        elif name == "glitch_blocks":
+            if self.preset_idx == 0:
+                effect.block_count, effect.max_shift, effect.intensity = 8, 30, 0.5
+            elif self.preset_idx == 1:
+                effect.block_count, effect.max_shift, effect.intensity = 16, 60, 0.8
+            else:
+                effect.block_count, effect.max_shift, effect.intensity = 4, 15, 0.3
+
+        elif name == "ascii_art":
+            if self.preset_idx == 0:
+                effect.cell_size, effect.colored = 8, True
+            elif self.preset_idx == 1:
+                effect.cell_size, effect.colored = 5, True
+            else:
+                effect.cell_size, effect.colored = 8, False
+
+        elif name == "datamosh":
+            if self.preset_idx == 0:
+                effect.corruption, effect.intensity, effect.block_size = 0.3, 0.7, 16
+            elif self.preset_idx == 1:
+                effect.corruption, effect.intensity, effect.block_size = 0.6, 0.9, 8
+            else:
+                effect.corruption, effect.intensity, effect.block_size = 0.15, 0.5, 24
+
+        elif name == "zoom_pulse":
+            if self.preset_idx == 0:
+                effect.amplitude, effect.speed = 0.08, 0.12
+            elif self.preset_idx == 1:
+                effect.amplitude, effect.speed = 0.20, 0.20
+            else:
+                effect.amplitude, effect.speed = 0.04, 0.06
+
+        elif name == "duotone":
+            effect.palette_idx = self.preset_idx % len(effect.PALETTES)
+
+        elif name == "slit_scan":
+            if self.preset_idx == 0:
+                effect.buffer_size, effect.spread = 30, 1.0
+            elif self.preset_idx == 1:
+                effect.buffer_size, effect.spread = 50, 2.0
+            else:
+                effect.buffer_size, effect.spread = 15, 0.5
+
     # -------- FPS --------
     def _update_fps(self):
         self._fps_count += 1
@@ -366,8 +410,8 @@ class PipelineRunner:
                     f"FPS: {self._fps:.1f} | Stack: [{','.join(str(e) for e in self._stack_ids())}]",
                     f"Active: {self._stack_names()}",
                     f"Preset: {self.preset_idx} | Motion: {m:.2f} | Pose: {self.pose_enabled} | Audio: {self.audio.enabled} | MIDI: {self.midi.enabled} | AutoVJ: {self.autovj.enabled}{audio_str}",
-                    f"VCam: {self.vcam.enabled} | Rec: {self.recorder.enabled} | {bars}",
-                    "1-9 -=\\ fx | 0 clr | [] pst | TAB cyc | c vcam | w rec | F1-8 load | !-* save | a m x g f h q",
+                    f"VCam: {self.vcam.enabled} | Rec: {self.recorder.enabled} | Page: {self.fx_page} ({self.fx_page*12+1}-{self.fx_page*12+12}) | {bars}",
+                    "1-9-=\\ fx | n page | 0 clr | [] pst | TAB cyc | c vcam | w rec | F1-8/!-* scene | a m x g f h q",
                 ])
 
             # --- Virtual cam + Recorder (clean frame, no HUD/FPS overlay) ---
@@ -410,22 +454,31 @@ class PipelineRunner:
                 if not self.perf_mode:
                     print(f"[pose] enabled={self.pose_enabled}")
 
-            # Effect toggle: 1-9
+            # Effect page toggle: n
+            elif key == ord("n"):
+                self.fx_page = 1 - self.fx_page
+                if not self.perf_mode:
+                    print(f"[fx_page] {self.fx_page} (effects {self.fx_page*12+1}-{self.fx_page*12+12})")
+
+            # Effect toggle: 1-9 (page-aware)
             elif ord("1") <= key <= ord("9"):
-                effect_id = key - ord("0")
+                effect_id = key - ord("0") + self.fx_page * 12
                 if effect_id in EFFECTS_FACTORY:
                     self._toggle_effect(effect_id)
 
-            # Effects 10-12: - = \
+            # Effects 10-12 on current page: - = \
             elif key == ord("-"):
-                if 10 in EFFECTS_FACTORY:
-                    self._toggle_effect(10)
+                eid = 10 + self.fx_page * 12
+                if eid in EFFECTS_FACTORY:
+                    self._toggle_effect(eid)
             elif key == ord("="):
-                if 11 in EFFECTS_FACTORY:
-                    self._toggle_effect(11)
+                eid = 11 + self.fx_page * 12
+                if eid in EFFECTS_FACTORY:
+                    self._toggle_effect(eid)
             elif key == ord("\\"):
-                if 12 in EFFECTS_FACTORY:
-                    self._toggle_effect(12)
+                eid = 12 + self.fx_page * 12
+                if eid in EFFECTS_FACTORY:
+                    self._toggle_effect(eid)
 
             # Clear effects: 0
             elif key == ord("0"):

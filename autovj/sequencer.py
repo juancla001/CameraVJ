@@ -3,9 +3,9 @@ import random
 
 # Effect pools by energy level
 # IDs correspond to EFFECTS_FACTORY keys
-POOL_LOW = [1, 4, 6, 9]        # posterize, kaleido, trails, thermal
-POOL_MID = [2, 3, 5, 7, 11]    # contours, glitch, scanlines, chromatic, edge_neon
-POOL_HIGH = [3, 5, 7, 8, 10, 12]  # glitch, scanlines, chromatic, pixel_sort, strobe, vhs
+POOL_LOW = [1, 4, 6, 9, 15, 19]           # posterize, kaleido, trails, thermal, particles, duotone
+POOL_MID = [2, 3, 5, 7, 11, 14, 16, 20]  # contours, glitch, scanlines, chromatic, edge_neon, ascii, invert, slitscan
+POOL_HIGH = [3, 5, 7, 8, 10, 12, 13, 17, 18]  # glitch, scanlines, chromatic, pixelsort, strobe, vhs, glitch_blocks, datamosh, zoom
 
 
 class Sequencer:
