@@ -8,12 +8,18 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Output files
-output/
+# Output files (media, not python source)
+output/*.mp4
+output/*.avi
+output/*.png
+output/*.jpg
 
 # IDE
 .vscode/
 .idea/
+
+# Scenes (user-specific)
+scenes.json
 
 # OS
 .DS_Store

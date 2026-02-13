@@ -10,6 +10,8 @@ from effects import EFFECTS_FACTORY
 from audio import AudioManager
 from midi import MidiController
 from autovj import AutoVJManager
+from output import VirtualCamOutput, VideoRecorder
+from scenes import SceneManager
 
 
 def _apply_hud(frame, lines):
@@ -68,6 +70,13 @@ class PipelineRunner:
 
         # --- Auto-VJ ---
         self.autovj = AutoVJManager()
+
+        # --- Output ---
+        self.vcam = VirtualCamOutput()
+        self.recorder = VideoRecorder()
+
+        # --- Scenes ---
+        self.scene_mgr = SceneManager()
 
         # --- FPS counter ---
         self._fps_time = time.time()
@@ -357,9 +366,15 @@ class PipelineRunner:
                     f"FPS: {self._fps:.1f} | Stack: [{','.join(str(e) for e in self._stack_ids())}]",
                     f"Active: {self._stack_names()}",
                     f"Preset: {self.preset_idx} | Motion: {m:.2f} | Pose: {self.pose_enabled} | Audio: {self.audio.enabled} | MIDI: {self.midi.enabled} | AutoVJ: {self.autovj.enabled}{audio_str}",
-                    f"{bars}",
-                    "1-9 -=\\ toggle | 0 clear | [] preset | TAB cycle | a audio | m midi | x autovj | g pose | f full | h HUD | q quit",
+                    f"VCam: {self.vcam.enabled} | Rec: {self.recorder.enabled} | {bars}",
+                    "1-9 -=\\ fx | 0 clr | [] pst | TAB cyc | c vcam | w rec | F1-8 load | !-* save | a m x g f h q",
                 ])
+
+            # --- Virtual cam + Recorder (clean frame, no HUD/FPS overlay) ---
+            if self.vcam.enabled:
+                self.vcam.send(out)
+            if self.recorder.enabled:
+                self.recorder.write(out)
 
             # --- FPS overlay (always visible) ---
             cv2.putText(out, f"{self._fps:.0f}", (out.shape[1] - 60, 30),
@@ -376,7 +391,8 @@ class PipelineRunner:
             if self.show_vision_debug and not self.perf_mode:
                 cv2.imshow("MotionMask (debug)", motion_mask)
 
-            key = cv2.waitKey(1) & 0xFF
+            raw_key = cv2.waitKeyEx(1)
+            key = raw_key & 0xFF
 
             if key == ord("q"):
                 break
@@ -440,13 +456,29 @@ class PipelineRunner:
                 self.midi.toggle()
             elif key == ord("x"):
                 self.autovj.toggle()
+            elif key == ord("c"):
+                self.vcam.toggle()
+            elif key == ord("w"):
+                self.recorder.toggle(frame_size=frame.shape[:2])
 
             elif key == ord("r"):
                 self._reset_active_effect()
             elif key == ord("s"):
                 self._screenshot(out)
 
+            # Scene load: F1-F8 (OpenCV waitKeyEx codes on Windows)
+            elif 0x700000 <= raw_key <= 0x700007:
+                self.scene_mgr.load_scene(raw_key - 0x700000 + 1, self)
+            # Scene save: Shift+1-8 (!@#$%^&*)
+            elif key in (ord("!"), ord("@"), ord("#"), ord("$"), ord("%"), ord("^"), ord("&"), ord("*")):
+                save_map = {"!": 1, "@": 2, "#": 3, "$": 4, "%": 5, "^": 6, "&": 7, "*": 8}
+                slot = save_map.get(chr(key), 0)
+                if slot:
+                    self.scene_mgr.save_scene(slot, self)
+
         # Cleanup
+        self.vcam.stop()
+        self.recorder.stop()
         self.audio.stop()
         self.midi.stop()
         cv2.destroyAllWindows()
